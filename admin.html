@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AETERNUS Checker — админка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* Стили, нужные только админке. Основное оформление — в styles.css */
+.adm{max-width:1180px;margin:0 auto;padding:20px}
+.adm-bar{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--line)}
+.adm-bar .in{max-width:1180px;margin:0 auto;padding:9px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:18px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);padding:6px 13px;border-radius:99px;font-size:13px;color:var(--ink-soft)}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:500}
+.warnbox{background:var(--warn-bg);color:var(--warn);padding:11px 14px;border-radius:var(--r);font-size:13px;margin-bottom:18px;line-height:1.5}
+.rec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:7px;overflow:hidden}
+.rec.changed{border-color:var(--accent)}
+.rec-h{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;cursor:pointer}
+.rec-h .k{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-mute);flex:none;width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-h .v{flex:1;min-width:0;font-size:13.5px}
+.rec-h .tag{font-family:var(--f-mono);font-size:9.5px;padding:2px 5px;border-radius:2px;flex:none;
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.rec-b{padding:0 12px 12px;display:none}
+.rec.open .rec-b{display:block}
+.fld2{margin-bottom:10px}
+.fld2 label{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:4px}
+.fld2 input,.fld2 textarea,.fld2 select{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;background:var(--raise);font-size:13px;font-family:inherit;line-height:1.5}
+.fld2 textarea{min-height:70px;resize:vertical}
+.fld2 .orig{font-size:12px;color:var(--ink-mute);margin-top:4px;line-height:1.45}
+.rec-a{display:flex;gap:7px;margin-top:4px}
+.search2{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:8px 11px;background:var(--surface);margin-bottom:12px}
+.filt{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.filt button{border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--ink-soft)}
+.filt button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.thgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:18px}
+.thcard{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--surface)}
+.thcard h4{font-size:13px;margin:0 0 8px}
+.swatches{display:flex;gap:4px;margin-bottom:9px}
+.swatches i{width:22px;height:22px;border-radius:3px;border:1px solid rgba(128,128,128,.3)}
+.thedit{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.thedit label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft)}
+.thedit input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--line);border-radius:3px;background:none;flex:none}
+.thedit span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.code{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:11px;
+  font-family:var(--f-mono);font-size:11.5px;line-height:1.5;white-space:pre;overflow:auto;max-height:340px;margin:0}
+.hint2{color:var(--ink-mute);font-size:12.5px;line-height:1.55}
+.count{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-mute)}
+</style>
+</head>
+<body>
+
+<header class="adm-bar">
+  <div class="in">
+    <div class="mark"><b>AETERNUS</b><s>админка</s></div>
+    <span class="count" id="cnt"></span>
+    <div class="grow"></div>
+    <button class="btn" onclick="Adm.loadFile()">Загрузить overrides.js</button>
+    <button class="btn" onclick="Adm.resetAll()">Сбросить всё</button>
+    <button class="btn btn-p" onclick="Adm.save()">Выгрузить overrides.js</button>
+  </div>
+</header>
+
+<div class="adm">
+  <div class="warnbox">
+    Правки сохраняются в файл <b>overrides.js</b>. Положите его в папку рядом с checker.html —
+    он подключается последним и накрывает базу, поэтому обновление остальных файлов правки не затрагивает.
+    <br><b>Не редактируйте одно и то же и здесь, и в базовых файлах:</b> победит overrides.js,
+    и правка в базе будет выглядеть неработающей.
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="pane"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" accept=".js" hidden>
+
+<script src="config.js"></script>
+<script src="db.js"></script>
+<script src="library.js"></script>
+<script src="templates.js"></script>
+<script src="robots.js"></script>
+<script>var HELP = {};</script>
+<script src="help-1-index-response.js"></script>
+<script src="help-2-meta-url.js"></script>
+<script src="help-3-media-speed-markup.js"></script>
+<script src="help-4-commerce-analytics.js"></script>
+<script src="help-5-pages-blocks.js"></script>
+<script src="help-6-trust-industry-legal.js"></script>
+<script src="help-7-geo.js"></script>
+<script src="overrides.js"></script>
+<script>
+/* ═══════════ АДМИНКА ═══════════ */
+const ADM_KEY='aeternus:overrides';
+
+/* Рабочая копия переопределений */
+let O = {items:{},tpl:{},arg:{},lib:{},themes:{},sf:{}};
+
+/* Базовые темы — читаются из styles.css, чтобы конструктор
+   начинал с реальных значений, а не с выдуманных */
+const THEME_LIST=[
+  ['paper','Бумага',false],['linen','Холст',false],['contrast','Контраст',false],
+  ['graphite','Графит',true],['midnight','Ночной синий',true],['coal','Уголь',true]
+];
+const THEME_VARS=[
+  ['--bg','Фон страницы'],['--surface','Карточки'],['--surface2','Второй фон'],['--raise','Поля ввода'],
+  ['--line','Границы'],['--line-soft','Мягкие границы'],
+  ['--ink','Основной текст'],['--ink-soft','Второй текст'],['--ink-mute','Приглушённый текст'],
+  ['--accent','Акцент'],['--accent-soft','Фон акцента'],['--accent-ink','Текст на акценте'],
+  ['--ok','Статус «ок»'],['--bad','Статус «ошибка»'],['--na','Статус «н/п»'],['--warn','Предупреждение']
+];
+
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byslug={};
+BLOCKS.forEach(b=>b.items.forEach(i=>byslug[i.slug]={item:i,block:b.n}));
+
+const Adm={
+tab:'items', q:'', filt:'all',
+
+async init(){
+  if(typeof OVERRIDES!=='undefined') O=Object.assign(O,JSON.parse(JSON.stringify(OVERRIDES)));
+  try{
+    const raw=localStorage.getItem(ADM_KEY);
+    if(raw){ const d=JSON.parse(raw); if(Object.values(d).some(x=>Object.keys(x||{}).length)) O=Object.assign(O,d); }
+  }catch(e){}
+  document.getElementById('fileIn').addEventListener('change',e=>this.readFile(e.target));
+  this.renderTabs(); this.render();
+},
+store(){ try{ localStorage.setItem(ADM_KEY,JSON.stringify(O)); }catch(e){} this.counts(); },
+counts(){
+  const n=['items','tpl','arg','lib','themes'].reduce((a,k)=>a+Object.keys(O[k]||{}).length,0);
+  document.getElementById('cnt').textContent = n? 'изменено записей: '+n : 'изменений нет';
+},
+
+renderTabs(){
+  const T=[['items','Пункты чек-листа'],['tpl','Шаблоны ТЗ'],['arg','Аргументация'],
+           ['lib','Блоки и страницы'],['themes','Темы оформления'],['out','Готовый файл']];
+  document.getElementById('tabs').innerHTML=T.map(([k,l])=>
+    '<button aria-pressed="'+(this.tab===k)+'" onclick="Adm.go(\''+k+'\')">'+l+'</button>').join('');
+},
+go(t){ this.tab=t; this.q=''; this.renderTabs(); this.render(); },
+render(){ this.counts(); document.getElementById('pane').innerHTML=this['view_'+this.tab](); },
+
+/* ─── общие части ─── */
+head(ph){
+  return '<input class="search2" id="q" placeholder="'+esc(ph)+'" value="'+esc(this.q)+'" oninput="Adm.setQ(this.value)">'+
+    '<div class="filt">'+[['all','Все'],['changed','Только изменённые']].map(([k,l])=>
+    '<button aria-pressed="'+(this.filt===k)+'" onclick="Adm.setF(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+},
+setQ(v){ this.q=v; const p=document.getElementById('list'); if(p) p.innerHTML=this['list_'+this.tab]();
+  const el=document.getElementById('q'); if(el){el.focus(); el.setSelectionRange(v.length,v.length);} },
+setF(v){ this.filt=v; this.render(); },
+match(txt,key){
+  const q=this.q.trim().toLowerCase();
+  if(q && !(txt+' '+key).toLowerCase().includes(q)) return false;
+  return true;
+},
+fld(label,val,orig,fn,rows){
+  return '<div class="fld2"><label>'+esc(label)+'</label>'+
+    (rows? '<textarea oninput="'+fn+'">'+esc(val)+'</textarea>'
+         : '<input value="'+esc(val)+'" oninput="'+fn+'">')+
+    (orig!=null? '<div class="orig"><b>Было:</b> '+esc(orig)+'</div>':'')+'</div>';
+},
+
+/* ─── пункты ─── */
+view_items(){ return this.head('Поиск по тексту проверки или слагу')+'<div id="list">'+this.list_items()+'</div>'; },
+list_items(){
+  let h='', n=0;
+  Object.keys(byslug).forEach(slug=>{
+    const it=byslug[slug].item, ch=O.items[slug];
+    if(this.filt==='changed'&&!ch) return;
+    if(!this.match(it.t,slug)) return;
+    if(n++>200) return;
+    const cur=Object.assign({},it,ch||{});
+    h+='<div class="rec '+(ch?'changed':'')+'" id="r-'+slug.replace(/\W/g,'_')+'">'+
+      '<div class="rec-h" onclick="Adm.toggle(this)"><span class="k">'+esc(slug)+'</span>'+
+      '<span class="v">'+esc(cur.t)+'</span>'+(ch?'<span class="tag">изменено</span>':'')+'</div>'+
+      '<div class="rec-b">'+
+        this.fld('Текст проверки',cur.t, ch&&ch.t?it.t:null,'Adm.setItem(\''+slug+'\',\'t\',this.value)',1)+
+        this.fld('Подсказка',cur.hint||'', ch&&ch.hint!=null?(it.hint||'—'):null,'Adm.setItem(\''+slug+'\',\'hint\',this.value)',1)+
+        '<div class="fld2"><label>Приоритет</label><select onchange="Adm.setItem(\''+slug+'\',\'p\',this.value)">'+
+          [['crit','критично'],['high','важно'],['med','средне'],['low','мелочь']].map(([k,l])=>
+          '<option value="'+k+'" '+(cur.p===k?'selected':'')+'>'+l+'</option>').join('')+'</select>'+
+          (ch&&ch.p?'<div class="orig"><b>Было:</b> '+it.p+'</div>':'')+'</div>'+
+        (ch? '<div class="rec-a"><button class="btn btn-s" onclick="Adm.reset(\'items\',\''+slug+'\')">Вернуть как было</button></div>':'')+
+      '</div></div>';
+  });
+  return h||'<p class="hint2">Ничего не найдено.</p>';
+},
+setItem(slug,f,v){
+  const base=byslug[slug].item;
+  O.items[slug]=O.items[slug]||{};
+  if(String(v)===String(base[f]==null?'':base[f])) delete O.items[slug][f];
+  else O.items[slug][f]=v;
+  if(!Object.keys(O.items[slug]).length) delete O.items[slug];
+  this.store();
+},
+
+/* ─── шаблоны ─── */
+view_tpl(){ return this.head('Поиск по заголовку задачи или слагу')+'<div id="list">'+this.list_tpl()+'</div>'; },
+list_tpl(){
+  if(typeof TPL==='undefined') return '<p class="hint2">Файл templates.js не подключён.</p>';
+  let h='';
+  Object.keys(TPL).forEach(slug=>{
+    const t=TPL[slug], ch=O.tpl[slug];
+    if(this.filt==='changed'&&!ch) return;
+    if(!this.match(t.title+' '+t.task,slug)) return;
+    const cur=Object.assign({},t,ch||{});
+    h+='<div class="rec '+(ch?'changed':'')+'">'+
+      '<div class="rec-h" onclick="Adm.toggle(this)"><span class="k">'+esc(slug)+'</span>'+
+      '<span class="v">'+esc(cur.title)+'</span>'+(ch?'<span class="tag">изменено</span>':'')+'</div>'+
+      '<div class="rec-b">'+
+        this.fld('Заголовок задачи',cur.title, ch&&ch.title?t.title:null,'Adm.setTpl(\''+slug+'\',\'title\',this.value)')+
+        this.fld('Задача (после слова «Задача:»)',cur.task, ch&&ch.task?t.task:null,'Adm.setTpl(\''+slug+'\',\'task\',this.value)',1)+
+        this.fld('Что нужно сделать — по одному в строке',(cur.todo||[]).join('\n'),
+          ch&&ch.todo?(t.todo||[]).join(' · '):null,'Adm.setTplList(\''+slug+'\',\'todo\',this.value)',1)+
+        this.fld('Факты с переменными — по одному в строке',(cur.facts||[]).join('\n'),
+          ch&&ch.facts?(t.facts||[]).join(' · '):null,'Adm.setTplList(\''+slug+'\',\'facts\',this.value)',1)+
+        '<p class="hint2">Аргументация берётся из словаря по ключу <b>'+esc(t.impact||'—')+'</b>. '+
+        'Правится на вкладке «Аргументация» и меняется сразу во всех задачах с этим ключом.</p>'+
+        (ch? '<div class="rec-a"><button class="btn btn-s" onclick="Adm.reset(\'tpl\',\''+slug+'\')">Вернуть как было</button></div>':'')+
+      '</div></div>';
+  });
+  return h||'<p class="hint2">Ничего не найдено.</p>';
+},
+setTpl(slug,f,v){
+  O.tpl[slug]=O.tpl[slug]||{};
+  if(v===TPL[slug][f]) delete O.tpl[slug][f]; else O.tpl[slug][f]=v;
+  if(!Object.keys(O.tpl[slug]).length) delete O.tpl[slug];
+  this.store();
+},
+setTplList(slug,f,v){
+  const a=v.split(/\n/).map(x=>x.trim()).filter(Boolean);
+  O.tpl[slug]=O.tpl[slug]||{};
+  if(JSON.stringify(a)===JSON.stringify(TPL[slug][f]||[])) delete O.tpl[slug][f];
+  else O.tpl[slug][f]=a;
+  if(!Object.keys(O.tpl[slug]).length) delete O.tpl[slug];
+  this.store();
+},
+
+/* ─── аргументация ─── */
+view_arg(){ return this.head('Поиск по тексту или ключу')+'<div id="list">'+this.list_arg()+'</div>'; },
+list_arg(){
+  if(typeof ARG==='undefined') return '<p class="hint2">Файл templates.js не подключён.</p>';
+  let h='';
+  Object.keys(ARG).forEach(k=>{
+    const ch=O.arg[k];
+    if(this.filt==='changed'&&!ch) return;
+    if(!this.match(ARG[k],k)) return;
+    const used=(typeof TPL!=='undefined')?Object.keys(TPL).filter(s=>TPL[s].impact===k):[];
+    const usedG=(typeof GROUPS!=='undefined')?Object.keys(GROUPS).filter(s=>GROUPS[s].impact===k):[];
+    const cur=ch!=null?ch:ARG[k];
+    h+='<div class="rec '+(ch?'changed':'')+'">'+
+      '<div class="rec-h" onclick="Adm.toggle(this)"><span class="k">'+esc(k)+'</span>'+
+      '<span class="v">'+esc(cur.slice(0,120))+'…</span>'+
+      '<span class="tag" style="background:var(--na-bg);color:var(--ink-soft)">'+(used.length+usedG.length)+'</span>'+
+      (ch?'<span class="tag">изменено</span>':'')+'</div>'+
+      '<div class="rec-b">'+
+        this.fld('Абзац «На что влияет»',cur, ch?ARG[k]:null,'Adm.setArg(\''+k+'\',this.value)',1)+
+        '<p class="hint2"><b>Используется в задачах:</b> '+
+        (used.concat(usedG.map(g=>'группа '+g)).join(', ')||'нигде')+'</p>'+
+        (ch? '<div class="rec-a"><button class="btn btn-s" onclick="Adm.reset(\'arg\',\''+k+'\')">Вернуть как было</button></div>':'')+
+      '</div></div>';
+  });
+  return h||'<p class="hint2">Ничего не найдено.</p>';
+},
+setArg(k,v){ if(v===ARG[k]) delete O.arg[k]; else O.arg[k]=v; this.store(); },
+
+/* ─── библиотека ─── */
+view_lib(){ return this.head('Поиск по названию блока или страницы')+'<div id="list">'+this.list_lib()+'</div>'; },
+list_lib(){
+  if(typeof LIB==='undefined') return '<p class="hint2">Файл library.js не подключён.</p>';
+  let h='';
+  Object.keys(LIB).forEach(slug=>{
+    const L=LIB[slug], ch=O.lib[slug];
+    if(this.filt==='changed'&&!ch) return;
+    const name=L.kind==='page'?(L.url||slug):(L.h2||slug);
+    if(!this.match(name+' '+(L.task||''),slug)) return;
+    const cur=Object.assign({},L,ch||{});
+    const isPage=L.kind==='page';
+    h+='<div class="rec '+(ch?'changed':'')+'">'+
+      '<div class="rec-h" onclick="Adm.toggle(this)"><span class="k">'+esc(slug)+'</span>'+
+      '<span class="v">'+esc(isPage?'Страница '+(cur.url||''):'Блок «'+(cur.h2||'')+'»')+'</span>'+
+      (ch?'<span class="tag">изменено</span>':'')+'</div><div class="rec-b">'+
+      (isPage
+        ? this.fld('Адрес',cur.url||'',ch&&ch.url?L.url:null,'Adm.setLib(\''+slug+'\',\'url\',this.value)')+
+          this.fld('Цель создания — по одному в строке',(cur.goals||[]).join('\n'),null,'Adm.setLibList(\''+slug+'\',\'goals\',this.value)',1)+
+          this.fld('На странице должны быть — по одному в строке',(cur.contains||[]).join('\n'),null,'Adm.setLibList(\''+slug+'\',\'contains\',this.value)',1)+
+          this.fld('Размещение ссылки',cur.link||'',null,'Adm.setLib(\''+slug+'\',\'link\',this.value)')
+        : this.fld('Заголовок H2',cur.h2||'',ch&&ch.h2?L.h2:null,'Adm.setLib(\''+slug+'\',\'h2\',this.value)')+
+          this.fld('Задача блока',cur.task||'',null,'Adm.setLib(\''+slug+'\',\'task\',this.value)',1)+
+          this.fld('Зачем',cur.why||'',null,'Adm.setLib(\''+slug+'\',\'why\',this.value)',1)+
+          this.fld('Структура — по одному в строке',(cur.structure||[]).join('\n'),null,'Adm.setLibList(\''+slug+'\',\'structure\',this.value)',1)+
+          this.fld('Размещение',cur.place||'',null,'Adm.setLib(\''+slug+'\',\'place\',this.value)',1)+
+          this.fld('Визуальные требования',cur.visual||'',null,'Adm.setLib(\''+slug+'\',\'visual\',this.value)',1))+
+      (ch? '<div class="rec-a"><button class="btn btn-s" onclick="Adm.reset(\'lib\',\''+slug+'\')">Вернуть как было</button></div>':'')+
+      '</div></div>';
+  });
+  return h||'<p class="hint2">Ничего не найдено.</p>';
+},
+setLib(slug,f,v){
+  O.lib[slug]=O.lib[slug]||{};
+  if(v===(LIB[slug][f]||'')) delete O.lib[slug][f]; else O.lib[slug][f]=v;
+  if(!Object.keys(O.lib[slug]).length) delete O.lib[slug];
+  this.store();
+},
+setLibList(slug,f,v){
+  const a=v.split(/\n/).map(x=>x.trim()).filter(Boolean);
+  O.lib[slug]=O.lib[slug]||{};
+  if(JSON.stringify(a)===JSON.stringify(LIB[slug][f]||[])) delete O.lib[slug][f];
+  else O.lib[slug][f]=a;
+  if(!Object.keys(O.lib[slug]).length) delete O.lib[slug];
+  this.store();
+},
+
+/* ─── темы ─── */
+view_themes(){
+  const own=Object.keys(O.themes||{});
+  let h='<p class="hint2" style="margin-bottom:14px">Выберите готовую тему как основу, поменяйте цвета — '+
+    'результат сразу применится к этой странице. Своя тема появится в меню чекера рядом со встроенными.</p>';
+  h+='<div class="thgrid">'+THEME_LIST.map(([k,label,dark])=>
+    '<div class="thcard"><h4>'+esc(label)+'</h4>'+
+    '<div class="swatches">'+['--bg','--surface','--ink','--accent','--ok','--bad'].map(v=>
+      '<i style="background:'+this.varOf(k,v)+'"></i>').join('')+'</div>'+
+    '<button class="btn btn-s" onclick="Adm.newTheme(\''+k+'\')">Взять за основу</button></div>').join('')+'</div>';
+
+  if(own.length){
+    h+='<h3 style="font-size:15px;margin:22px 0 10px">Свои темы</h3>';
+    own.forEach(k=>{
+      const t=O.themes[k];
+      h+='<div class="rec changed open"><div class="rec-h"><span class="k">'+esc(k)+'</span>'+
+        '<span class="v">'+esc(t.label||k)+'</span></div><div class="rec-b">'+
+        this.fld('Название в меню',t.label||k,null,'Adm.setThemeLabel(\''+k+'\',this.value)')+
+        '<div class="thedit">'+THEME_VARS.map(([v,lbl])=>
+          '<label><input type="color" value="'+this.hex(t.vars[v])+'" '+
+          'oninput="Adm.setThemeVar(\''+k+'\',\''+v+'\',this.value)"><span>'+esc(lbl)+'</span></label>').join('')+
+        '</div>'+
+        '<div class="rec-a" style="margin-top:12px">'+
+        '<button class="btn btn-s" onclick="Adm.preview(\''+k+'\')">Показать на этой странице</button>'+
+        '<button class="btn btn-s" onclick="Adm.preview(\'paper\')">Вернуть обычную</button>'+
+        '<button class="btn btn-s" onclick="Adm.reset(\'themes\',\''+k+'\')">Удалить тему</button>'+
+        '</div></div></div>';
+    });
+  }
+  return h;
+},
+varOf(theme,v){
+  const el=document.createElement('div');
+  el.style.display='none'; el.setAttribute('data-probe','1');
+  document.documentElement.setAttribute('data-theme-probe',theme);
+  const prev=document.documentElement.dataset.theme;
+  document.documentElement.dataset.theme=theme;
+  const val=getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  document.documentElement.dataset.theme=prev;
+  return val||'#888';
+},
+hex(v){ v=String(v||'').trim(); return /^#[0-9a-f]{6}$/i.test(v)? v : (/^#[0-9a-f]{3}$/i.test(v)? '#'+v.slice(1).split('').map(c=>c+c).join('') : '#888888'); },
+newTheme(base){
+  const name=prompt('Имя темы латиницей, без пробелов:','my-theme');
+  if(!name||!/^[a-z0-9-]+$/i.test(name)){ if(name) this.toast('Только латиница, цифры и дефис'); return; }
+  const vars={};
+  THEME_VARS.forEach(([v])=>vars[v]=this.hex(this.varOf(base,v)));
+  O.themes[name]={label:name,vars};
+  this.store(); this.render();
+},
+setThemeLabel(k,v){ O.themes[k].label=v; this.store(); },
+setThemeVar(k,v,val){ O.themes[k].vars[v]=val; this.store(); this.preview(k); },
+preview(k){
+  let el=document.getElementById('previewStyle');
+  if(!el){ el=document.createElement('style'); el.id='previewStyle'; document.head.appendChild(el); }
+  if(O.themes[k]) el.textContent='html[data-theme="'+k+'"]{'+
+    Object.entries(O.themes[k].vars).map(([p,v])=>p+':'+v).join(';')+'}';
+  document.documentElement.dataset.theme=k;
+},
+
+/* ─── готовый файл ─── */
+view_out(){
+  return '<p class="hint2" style="margin-bottom:12px">Скачайте файл и положите его в папку рядом с checker.html. '+
+    'Если файл там уже есть — замените.</p>'+
+    '<pre class="code">'+esc(this.build())+'</pre>'+
+    '<div class="rec-a" style="margin-top:12px">'+
+    '<button class="btn btn-p" onclick="Adm.save()">Скачать overrides.js</button>'+
+    '<button class="btn" onclick="Adm.copy()">Скопировать</button></div>';
+},
+build(){
+  const clean={};
+  ['items','tpl','arg','lib','themes','sf'].forEach(k=>{ clean[k]=O[k]||{}; });
+  return '/* ============================================================\n'+
+  '   AETERNUS Checker — переопределения\n'+
+  '   Создано админкой '+new Date().toLocaleString('ru-RU')+'\n'+
+  '   ------------------------------------------------------------\n'+
+  '   Подключается последним и накрывает базу. Обновление\n'+
+  '   остальных файлов эти правки не затрагивает.\n'+
+  '   ============================================================ */\n\n'+
+  'const OVERRIDES = '+JSON.stringify(clean,null,2)+';\n\n'+
+  "if (typeof module!=='undefined') module.exports={OVERRIDES};\n";
+},
+save(){
+  const b=new Blob([this.build()],{type:'text/javascript;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='overrides.js'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  this.toast('Файл сохранён. Положите его рядом с checker.html');
+},
+copy(){
+  const ta=document.createElement('textarea'); ta.value=this.build();
+  ta.style.cssText='position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select();
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  this.toast(ok?'Скопировано':'Браузер не дал доступ к буферу');
+},
+loadFile(){ document.getElementById('fileIn').click(); },
+readFile(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const m=r.result.match(/const\s+OVERRIDES\s*=\s*([\s\S]*?);\s*(?:if\s*\(|$)/);
+      const d=JSON.parse(m[1]);
+      O=Object.assign({items:{},tpl:{},arg:{},lib:{},themes:{},sf:{}},d);
+      this.store(); this.render(); this.toast('Переопределения загружены');
+    }catch(e){ this.toast('Не удалось прочитать файл'); }
+    inp.value='';
+  };
+  r.readAsText(f);
+},
+reset(kind,key){ delete O[kind][key]; this.store(); this.render(); },
+resetAll(){
+  if(!confirm('Все правки будут удалены. Продолжить?')) return;
+  O={items:{},tpl:{},arg:{},lib:{},themes:{},sf:{}};
+  this.store(); this.render(); this.toast('Все правки сброшены');
+},
+toggle(el){ el.parentNode.classList.toggle('open'); },
+toast(t){
+  const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on');
+  clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3000);
+}
+};
+Adm.init();
+</script>
+</body>
+</html>

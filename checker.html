@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AETERNUS — SEO Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ШАПКА -->
+<header class="bar noprint" id="bar">
+  <div class="bar-in">
+    <a class="mark" href="#" onclick="return false" aria-label="AETERNUS SEO Audit"><b>AETERNUS</b><i></i><s>SEO&nbsp;AUDIT</s></a>
+    <div class="stat" id="stat"></div>
+    <div class="grow"></div>
+    <span class="save-ind" id="saveInd"></span>
+    <button class="btn audit-only" onclick="App.openImport()">Импорт SF</button>
+    <button class="btn audit-only" onclick="App.saveFile()">Сохранить файл</button>
+    <div class="menu audit-only" id="mExport">
+      <button class="btn btn-p" onclick="App.toggleMenu('mExport')">Выгрузить ▾</button>
+      <div class="menu-pop">
+        <button onclick="App.copyTZ()">Скопировать ТЗ<em>вставить в пустой документ Google Docs</em></button>
+        <button onclick="App.downloadTZ()">Скачать ТЗ файлом<em>то же самое в .md — для архива</em></button>
+        <hr>
+        <button onclick="App.downloadFull()">Полный чек-лист<em>все проверки со статусами, а не только ошибки</em></button>
+        <button onclick="App.copyTasks()">Таблица задач<em>для Google Таблиц: контроль выполнения подрядчиком</em></button>
+        <hr>
+        <button onclick="window.print()">Печать или PDF<em>чек-лист как есть на экране</em></button>
+      </div>
+    </div>
+    <div class="menu" id="mMore">
+      <button class="btn btn-s" onclick="App.toggleMenu('mMore')" title="Настройки">☰</button>
+      <div class="menu-pop">
+        <div class="lbl">Светлые темы</div>
+        <button data-th="paper"    onclick="App.theme('paper')">Бумага</button>
+        <button data-th="linen"    onclick="App.theme('linen')">Холст</button>
+        <button data-th="contrast" onclick="App.theme('contrast')">Контраст</button>
+        <div class="lbl">Тёмные темы</div>
+        <button data-th="graphite" onclick="App.theme('graphite')">Графит</button>
+        <button data-th="midnight" onclick="App.theme('midnight')">Ночной синий</button>
+        <button data-th="coal"     onclick="App.theme('coal')">Уголь</button>
+        <div id="ownThemes"></div>
+        <button data-th="auto"     onclick="App.theme('auto')">Как в системе</button>
+        <hr>
+        <button onclick="App.openFile()">Открыть сохранённый аудит</button>
+        <button class="audit-only" onclick="App.backToSetup()">Изменить конфигурацию</button>
+        <button onclick="App.askReset()">Начать новый аудит</button>
+        <hr>
+        <button class="audit-only" onclick="App.showKeys()">Горячие клавиши</button>
+      </div>
+    </div>
+  </div>
+  <div class="spectrum audit-only" id="spectrum" title="Спектр аудита: каждая полоса — одна проверка"></div>
+</header>
+
+<div class="wrap">
+
+<!-- ЭКРАН 1 -->
+<section class="setup" id="setup">
+  <div id="missing"></div>
+  <div id="resume"></div>
+
+  <div class="card" style="position:relative">
+    <button class="card-help noprint" onclick="App.showAbout()" title="Что это за экран" aria-label="Что это за экран">?</button>
+    <div class="eyebrow">Проект</div>
+    <div class="fields">
+      <div class="fld"><label for="f-client">Клиент</label><input id="f-client" placeholder="Название организации" autocomplete="off"></div>
+      <div class="fld"><label for="f-domain">Домен</label><input id="f-domain" placeholder="example.ru" autocomplete="off"></div>
+      <div class="fld"><label for="f-author">Аудитор</label><input id="f-author" placeholder="Ваше имя" autocomplete="off"></div>
+    </div>
+
+    <div class="eyebrow">Быстрый старт</div>
+    <div class="presets" id="presets"></div>
+
+    <div id="axes"></div>
+
+    <div class="go">
+      <button class="btn btn-p" onclick="App.build()">Собрать чек-лист</button>
+      <button class="btn" onclick="App.openFile()">Открыть файл проекта</button>
+      <span class="go-count" id="goCount"></span>
+    </div>
+  </div>
+  <div class="foot"><span id="creditSetup"></span></div>
+</section>
+
+<!-- ЭКРАН 2 -->
+<section id="audit" hidden>
+  <div class="cols">
+    <aside class="side noprint">
+      <nav id="nav"></nav>
+    </aside>
+    <main>
+      <div id="printHead" hidden></div>
+      <div class="tools noprint">
+        <div class="search">
+          <input id="q" placeholder="Поиск по проверкам и подсказкам" autocomplete="off">
+          <button onclick="App.clearSearch()" title="Очистить">×</button>
+        </div>
+        <button class="side-toggle" id="sideToggle" aria-expanded="false" onclick="App.toggleSide()">☰ Разделы</button>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div id="list"></div>
+      <div class="foot">
+        <span>Пункты со статусом «ошибка» попадают в выгрузку ТЗ вместе с комментариями.</span>
+        <span id="creditAudit"></span>
+      </div>
+    </main>
+    <aside class="hp noprint" id="hp">
+      <div class="hp-top">
+        <div class="row">
+          <h3 id="hpTitle"></h3>
+          <button class="x" onclick="App.helpClose()" title="Закрыть справку" aria-label="Закрыть справку">×</button>
+        </div>
+        <div class="meta"><span class="pri" id="hpPri"></span><code id="hpSlug"></code></div>
+      </div>
+      <div class="hp-body" id="hpBody"></div>
+      <div class="hp-foot">
+        <div class="acts" id="hpActs"></div>
+        <label class="hp-follow"><input type="checkbox" id="hpFollow" checked onchange="App.helpFollow(this.checked)">следовать за текущим пунктом</label>
+      </div>
+    </aside>
+  </div>
+</section>
+
+</div>
+
+<input type="file" id="fileIn" accept=".json" hidden>
+<input type="file" id="sfIn" accept=".csv" multiple hidden>
+<div class="drop" id="drop"><div>Отпустите файл аудита</div></div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="modal-box">
+  <h3 id="mTitle"></h3><p id="mText"></p>
+  <div class="modal-acts" id="mActs"></div>
+</div></div>
+
+<script src="config.js"></script>
+<script src="db.js"></script>
+<script src="library.js"></script>
+<script src="templates.js"></script>
+<script src="robots.js"></script>
+<script src="sf-map.js"></script>
+
+<script>var HELP = {};</script>
+<script src="help-1-index-response.js"></script>
+<script src="help-2-meta-url.js"></script>
+<script src="help-3-media-speed-markup.js"></script>
+<script src="help-4-commerce-analytics.js"></script>
+<script src="help-5-pages-blocks.js"></script>
+<script src="help-6-trust-industry-legal.js"></script>
+<script src="help-7-geo.js"></script>
+
+<script src="overrides.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
